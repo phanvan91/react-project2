@@ -1,102 +1,164 @@
 import React, { Component } from 'react';
 import './App.css';
+import TaskForm from "./components/TaskForm";
+import Control from "./components/Control";
+import TaskList from "./components/TaskList";
 
 class App extends Component {
+    constructor(props){
+        super(props);
+        this.state = {
+            tasks: [],
+            isDisplayForm:false,
+            taskEditing:null
+        }
+    }
+    componentWillMount(){
+        if(localStorage && localStorage.getItem('tasks')){
+            var tasks = JSON.parse(localStorage.getItem('tasks'));
+            this.setState({
+                tasks:tasks
+            });
+        }
+    }
+    // GenerateData = () =>{
+    //     var randomstring = require("randomstring");
+    //     var tasks = [
+    //         {id: randomstring.generate(),name:'Học Lập Trình',status:true},
+    //         {id:  randomstring.generate(),name:'Đi bơi',status:true},
+    //         {id:  randomstring.generate(),name:'Ngủ',status:false},
+    //     ]
+    //
+    //     this.setState({
+    //         tasks:tasks
+    //     })
+    //     localStorage.setItem('tasks',JSON.stringify(tasks));
+    //     console.log(this.state.tasks);
+    // }
+    addWork = () => {
+        if(this.state.isDisplayForm && this.state.taskEditing !== null){
+            this.setState({
+                isDisplayForm:true,
+                taskEditing:null
+            })
+        }else{
+            this.setState({
+                isDisplayForm:!this.state.isDisplayForm,
+                taskEditing:null
+            })
+        }
+
+    }
+    closeTaskForm = () =>{
+        this.setState({
+            isDisplayForm:false
+        })
+    }
+    openTaskForm = () =>{
+        this.setState({
+            isDisplayForm:true
+        })
+    }
+    receiveFrom = (taskform) => {
+        // console.log(taskform);
+        var {tasks} = this.state;
+        if(taskform.id === null){
+            var randomstring = require("randomstring");
+            var task = {id:randomstring.generate(),name:taskform.name,status:taskform.status === 'true' ? true:false};
+            tasks.push(task);
+        }else{
+            var index = this.findIndex(taskform.id);
+            tasks[index] = taskform
+        }
+
+        this.setState({
+            tasks:tasks,
+            taskEditing:null
+        })
+        localStorage.setItem('tasks',JSON.stringify(tasks))
+    }
+
+    onUpdateStatus = (id) => {
+        var {tasks} = this.state;
+        var index = this.findIndex(id);
+       if(index !== -1){
+           tasks[index].status = !tasks[index].status;
+           this.setState({
+               tasks:tasks
+           })
+       }
+       localStorage.setItem('tasks',JSON.stringify(tasks))
+    }
+    onDelete = (id) => {
+        var {tasks} = this.state;
+        var index = this.findIndex(id);
+        if(index !== -1){
+            tasks.splice(index,1);
+            this.setState({
+                tasks:tasks
+            })
+            localStorage.setItem('tasks',JSON.stringify(tasks));
+        }
+        this.closeTaskForm();
+
+    }
+    onUpdate = (id) => {
+        var {tasks} = this.state;
+        var index = this.findIndex(id);
+        var taskEditing = tasks[index];
+        this.setState({
+            taskEditing:taskEditing
+        })
+        this.openTaskForm();
+    }
+    findIndex(id){
+        var {tasks} = this.state;
+        var result = -1;
+        tasks.forEach((task,index)=>{
+            if(task.id === id){
+                result = index;
+            }
+        })
+        return result;
+    }
+    onFileter(filterName,filterStatus){
+        console.log(filterName,'-',filterStatus)
+    }
   render() {
-    return (
-     <div>
-         <div className={'container'}>
-             <div className={'row'}>
-                 <div className={'col-md-12'}>
-                     <h2 className={'text-center'}>Quản lí công việc</h2>
-                     <hr/>
-                 </div>
-                 <div className={'col-md-4'}>
-                    <div className={'panel panel-warning'}>
-                        <div className="panel-heading">Thêm công việc</div>
-                        <div className="panel-body">
-                            <form>
-                                <div className={'form-group'}>
-                                    <label htmlFor="name">Tên:</label>
-                                    <input type="text" className={'form-control'} name={'name'} />
-                                </div>
-                                <div className={'form-group'}>
-                                    <label htmlFor="status">Trạng thái:</label>
-                                    <select name="status" id="" className={'form-control'}>
-                                        <option value="1">Kích hoạt</option>
-                                        <option value="0"> Ẩn </option>
-                                    </select>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                 </div>
+        var {tasks,isDisplayForm, taskEditing} = this.state;
+        var elementTaskForm = isDisplayForm ? <TaskForm closeTaskForm={this.closeTaskForm} receiveFrom={this.receiveFrom}  taskEditing={taskEditing} /> : null;
+      return <div>
+          <div className={'container'}>
+              <div className={'row'}>
+                  <div className={'col-md-12'}>
+                      <h2 className={'text-center'}>Quản lí công việc</h2>
+                      <hr/>
+                  </div>
+                  <div className={'col-md-4'}>
+                      {elementTaskForm}
+                  </div>
 
-                 <div className={'col-md-8'}>
-                    <div className={'row'}>
-                        <div className={'col-md-12'}>
-                            <button type={'button'} className={'btn btn-primary'}>Thêm công việc</button>
-                            <br/><br/>
-                        </div>
+                  <div className={isDisplayForm?'col-md-8':'col-md-12'}>
+                      <div className={'row'}>
+                          <div className={'col-md-12'}>
+                              <button type={'button'} className={'btn btn-primary'} onClick={this.addWork}>Thêm công việc</button>
+                              &ensp;
+                              {/*<button type={'button'} className={'btn btn-danger'} onClick={this.GenerateData}>Generate Data</button>*/}
+                              <br/><br/>
+                          </div>
+                          {/*Search - Sort*/}
+                          <Control/>
+                          {/*End - Search , Sort*/}
+                          <div className={'col-md-12'}>
+                              <TaskList tasks={tasks} onUpdateStatus={this.onUpdateStatus} onDelete={this.onDelete} onUpdate={this.onUpdate} onFileter={this.onFileter} />
+                          </div>
 
-                        <div className={'col-md-6'}>
-                            <div className="input-group">
-                                <input type="text" className="form-control" placeholder="Recipient's username"
-                                       aria-describedby="basic-addon2" />
-                                    <span className="input-group-addon cursor" id="basic-addon2">Tìm Kiếm</span>
-                            </div>
-                        </div>
+                      </div>
+                  </div>
 
-                        <div className={'col-md-6'}>
-                            <button className={'btn btn-primary'}>Sắp xếp</button>
-                            <br/><br/>
-                        </div>
-
-                        <div className={'col-md-12'}>
-                            <table className="table table-hover">
-                                <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Tên</th>
-                                    <th>Trạng thái</th>
-                                    <th>Hành động</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                <tr>
-                                    <th scope="row"></th>
-                                    <td>
-                                        <input type="text" className={'form-control'} placeholder={'Tìm Kiếm'}/>
-                                    </td>
-                                    <td>
-                                        <select name="" id="" className={'form-control'}>
-                                            <option value="">Tất cả</option>
-                                        </select>
-                                    </td>
-                                    <td>
-
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th scope="row">1</th>
-                                    <td>Mark</td>
-                                    <td>Otto</td>
-                                    <td>
-                                        <button className={'btn btn-warning'}>Sủa</button> &ensp;
-                                        <button className={'btn btn-danger'}>Xóa</button>
-                                    </td>
-                                </tr>
-                                </tbody>
-                            </table>
-                        </div>
-
-                    </div>
-                 </div>
-
-             </div>
-         </div>
-     </div>
-    );
+              </div>
+          </div>
+      </div>;
   }
 }
 
